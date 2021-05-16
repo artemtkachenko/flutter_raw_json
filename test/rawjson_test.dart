@@ -1,63 +1,143 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rawjson/raw_json.dart';
 
-const RawJson kEmptyJson = RawJson.empty();
-final RawJson kEmptyJson1 = RawJson.fromString('');
-final RawJson kEmptyJson2 = RawJson.fromString('any_string');
-final RawJson kEmptyJson3 = RawJson.fromString(' ');
-final RawJson kEmptyJson4 = RawJson.fromAny(const <dynamic>[]);
-final RawJson kEmptyJson5 = RawJson.fromAny(const <dynamic, dynamic>{});
-final RawJson kEmptyJson6 = RawJson.fromAny(const <String, dynamic>{});
-final RawJson kEmptyJson7 = RawJson.fromAny(1);
-final RawJson kEmptyJson8 = RawJson.fromAny(1.0);
-final RawJson kEmptyJson9 = RawJson.fromAny(-1);
-final RawJson kEmptyJson10 = RawJson.fromAny(false);
-final RawJson kEmptyJson11 = RawJson.fromAny(true);
-
 void main() {
-  final emptyRawJsonCollection = [
-    kEmptyJson,
-    kEmptyJson1,
-    kEmptyJson2,
-    kEmptyJson3,
-    kEmptyJson4,
-    kEmptyJson5,
-    kEmptyJson6,
-    kEmptyJson7,
-    kEmptyJson8,
-    kEmptyJson9,
-    kEmptyJson10,
-    kEmptyJson11
-  ];
+  final jsonWithData = RawJson.fromAny(const {
+    /* int */
+    'positive_int_value': 1,
+    'negative_int_value': -1,
+    'null_int_value': null,
+    /* double */
+    'positive_double_value': 1.0,
+    'negative_double_value': -1.0,
+    'null_double_value': null,
+    /* bool */
+    'true_bool_value': true,
+    'false_bool_value': false,
+    'null_bool_value': null,
+    /* string */
+    'test_string': 'test string value',
+    'null_test_string': null,
+    /* collection of <String> */
+    'string_collection': ['1', '2', '3'],
+    'null_string_collection:': null,
+    /* map */
+    'test_map': {'int_key': 1, 'string_key': 'test string value'},
+    'null_test_map': null,
+    /* collection of Map<,> */
+    'test_collection': [
+      {'int_key': 1, 'string_key': 'test string value1'},
+      {'int_key': 2, 'string_key': 'test string value2'}
+    ],
+    'null_test_collection': null,
+  });
+  testDeserialization([jsonWithData]);
+
+  testDefaultValues([
+    const RawJson.empty(),
+    RawJson.fromString(''),
+    RawJson.fromString('any_string'),
+    RawJson.fromString(' '),
+    RawJson.fromString('\n'),
+    RawJson.fromAny(const <dynamic>[]),
+    RawJson.fromAny(const <dynamic, dynamic>{}),
+    RawJson.fromAny(const <String, dynamic>{}),
+    RawJson.fromAny(1),
+    RawJson.fromAny(1.0),
+    RawJson.fromAny(-1),
+    RawJson.fromAny(false),
+    RawJson.fromAny(true),
+    jsonWithData,
+  ]);
+}
+
+void testDeserialization(List<RawJson> testCollection) {
+  test('test deserialization implementation', () {
+    testCollection.forEach((rawJson) {
+      testType<int>(
+        positiveValueRawJson: rawJson['positive_int_value'],
+        expectedPositiveValue: 1,
+        negativeValueRawJson: rawJson['negative_int_value'],
+        expectedNegativeValue: -1,
+        nullValueRawJson: rawJson['null_int_value'],
+        expectedDefaultValue: 0,
+      );
+
+      testType<double>(
+        positiveValueRawJson: rawJson['positive_double_value'],
+        expectedPositiveValue: 1.0,
+        negativeValueRawJson: rawJson['negative_double_value'],
+        expectedNegativeValue: -1.0,
+        nullValueRawJson: rawJson['null_double_value'],
+        expectedDefaultValue: 0.0,
+      );
+
+      testType<bool>(
+        positiveValueRawJson: rawJson['true_bool_value'],
+        expectedPositiveValue: true,
+        negativeValueRawJson: rawJson['false_bool_value'],
+        expectedNegativeValue: false,
+        nullValueRawJson: rawJson['null_bool_value'],
+        expectedDefaultValue: false,
+      );
+
+      testType<String>(
+        positiveValueRawJson: rawJson['test_string'],
+        expectedPositiveValue: 'test string value',
+        nullValueRawJson: rawJson['null_test_string'],
+        expectedDefaultValue: '',
+      );
+
+      testType<List<String>>(
+        positiveValueRawJson: rawJson['string_collection'],
+        expectedPositiveValue: ['1', '2', '3'],
+        nullValueRawJson: rawJson['null_string_collection'],
+        expectedDefaultValue: [],
+      );
+
+      testType<Map<dynamic, dynamic>>(
+        positiveValueRawJson: rawJson['test_map'],
+        expectedPositiveValue: {'int_key': 1, 'string_key': 'test string value'},
+        nullValueRawJson: rawJson['null_test_string'],
+        expectedDefaultValue: <dynamic, dynamic>{},
+      );
+
+      final collectionRawJson = rawJson['test_collection'];
+      final nullRawJson = rawJson['null_test_collection'];
+      expect(collectionRawJson.available, true);
+      expect(nullRawJson.available, false);
+
+      expect(
+        collectionRawJson.rawJsonCollection().map((e) => e.value<Map<dynamic, dynamic>>()),
+        [
+          RawJson.fromAny(const {'int_key': 1, 'string_key': 'test string value1'}),
+          RawJson.fromAny(const {'int_key': 2, 'string_key': 'test string value2'})
+        ].map((e) => e.value<Map<dynamic, dynamic>>()),
+      );
+      expect(nullRawJson.rawJsonCollection(), <RawJson>[]);
+    });
+  });
+}
+
+void testDefaultValues(List<RawJson> testCollection) {
+  final rawJsonCollection = testCollection
+      .map((rawJson) => [
+            rawJson[''],
+            rawJson[' '],
+            rawJson['\n'],
+            rawJson['\n\r'],
+            rawJson['null'],
+            rawJson['empty'],
+            rawJson['some_value'],
+          ])
+      .expand((e) => e);
 
   test('empty json should not contain any values', () {
-    emptyRawJsonCollection
-        .map((rawJson) => [
-              rawJson[''],
-              rawJson[' '],
-              rawJson['\n'],
-              rawJson['\n\r'],
-              rawJson['null'],
-              rawJson['empty'],
-              rawJson['some_value'],
-            ])
-        .expand((e) => e)
-        .forEach((rawJson) => expect(rawJson.available, false));
+    rawJsonCollection.forEach((rawJson) => expect(rawJson.available, false));
   });
 
   test('checking default values in empty json', () {
-    emptyRawJsonCollection
-        .map((rawJson) => [
-              rawJson[''],
-              rawJson[' '],
-              rawJson['\n'],
-              rawJson['\n\r'],
-              rawJson['null'],
-              rawJson['empty'],
-              rawJson['some_value'],
-            ])
-        .expand((e) => e)
-        .forEach((rawJson) {
+    rawJsonCollection.forEach((rawJson) {
       final int intValue = rawJson.value();
       final intValue1 = rawJson.value<int>();
       expect(intValue, 0);
@@ -94,4 +174,36 @@ void main() {
       expect(stringDynamicMap1, <String, dynamic>{});
     });
   });
+}
+
+void testType<Type>({
+  required RawJson positiveValueRawJson,
+  required Type expectedPositiveValue,
+  RawJson? negativeValueRawJson,
+  Type? expectedNegativeValue,
+  required RawJson nullValueRawJson,
+  required Type expectedDefaultValue,
+}) {
+  expect(positiveValueRawJson.available, true);
+  if (negativeValueRawJson != null) {
+    expect(negativeValueRawJson.available, true);
+  }
+  expect(nullValueRawJson.available, false);
+
+  final Type positiveValue = positiveValueRawJson.value();
+  final intPositiveValue1 = positiveValueRawJson.value<Type>();
+  expect(positiveValue, expectedPositiveValue);
+  expect(intPositiveValue1, expectedPositiveValue);
+
+  if (negativeValueRawJson != null) {
+    final Type intNegativeValue = negativeValueRawJson.value();
+    final intNegativeValue1 = negativeValueRawJson.value<Type>();
+    expect(intNegativeValue, expectedNegativeValue);
+    expect(intNegativeValue1, expectedNegativeValue);
+  }
+
+  final Type intNullValue = nullValueRawJson.value();
+  final intNullValue1 = nullValueRawJson.value<Type>();
+  expect(intNullValue, expectedDefaultValue);
+  expect(intNullValue1, expectedDefaultValue);
 }
